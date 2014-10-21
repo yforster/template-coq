@@ -1,7 +1,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 
-Definition universe := positive.
+Definition universe := Type (* positive *).
 Definition ident := string.
 
 Inductive sort : Type :=

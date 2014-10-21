@@ -144,7 +144,6 @@ module TermReify = struct
     | Term.REVERTcast -> kRevertCast
 
   let quote_universe s =
-    (** TODO: This doesn't work yet **)
     to_positive 1
 
   let quote_sort s =
@@ -154,7 +153,8 @@ module TermReify = struct
 	else
 	  let _ = assert (s = Term.set_sort) in
 	  sSet
-    | Term.Type u -> Term.mkApp (sType, [| quote_universe u |])
+    | Term.Type u ->
+      Term.mkApp (sType, [| Term.mkSort s (* quote_universe u *) |])
 
   let quote_inductive env (t : Names.inductive) =
     let (m,i) = t in
@@ -414,16 +414,20 @@ module TermReify = struct
     else
       raise (Failure "non-value")
 
+(*
   let unquote_sort trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h sType then
-      raise (NotSupported h)
+      match args with
+	[x] -> x
+      | _ -> raise (NotSupported h)
     else if Term.eq_constr h sProp then
       Term.Prop Term.Pos
     else if Term.eq_constr h sSet then
       Term.Prop Term.Null
     else
       raise (Failure "ill-typed, expected sort")
+*)
 
   let kn_of_canonical_string s =
     let ss = List.rev (Str.split (Str.regexp (Str.quote ".")) s) in
@@ -478,7 +482,20 @@ module TermReify = struct
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tSort then
       match args with
-	x :: _ -> Term.mkSort (unquote_sort x)
+	trm :: _ ->
+	  begin
+	    let (h,args) = app_full trm [] in
+	    if Term.eq_constr h sType then
+	      match args with
+		[x] -> x
+	      | _ -> raise (NotSupported h)
+	    else if Term.eq_constr h sProp then
+	      Term.mkSort (Term.Prop Term.Pos)
+	    else if Term.eq_constr h sSet then
+	      Term.mkSort (Term.Prop Term.Null)
+	    else
+	      raise (Failure "ill-typed, expected sort")
+	  end
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tCast then
       match args with
