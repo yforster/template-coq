@@ -233,15 +233,15 @@ struct
   let quote_sort s =
     match s with
       Term.Prop _ ->
-	if s = Term.prop_sort then sProp
+	if Sorts.is_prop s then sProp
 	else
-	  let _ = assert (s = Term.set_sort) in
+	  let _ = assert (Sorts.is_set s) in
 	  sSet
     | Term.Type u -> Term.mkApp (sType, [| quote_universe u |]) 
 
   let quote_inductive env (t : Names.inductive) =
     let (m,i) = t in
-    Term.mkApp (tmkInd, [| quote_string (Names.string_of_kn (Names.canonical_mind m))
+    Term.mkApp (tmkInd, [| quote_string (Names.KerName.to_string (Names.canonical_mind m))
 			 ; int_to_nat i |])
 
   let mk_ctor_list =
@@ -309,7 +309,7 @@ struct
 	(Term.mkApp (tApp, [| f' ; to_coq_list tTerm (List.rev xs') |]), acc)
       | Term.Const (c,pu) -> (* FIXME: take universe constraints into account *)
          let kn = Names.Constant.canonical c in
-	 (Term.mkApp (tConst, [| quote_string (Names.string_of_kn kn) |]),
+	 (Term.mkApp (tConst, [| quote_string (Names.KerName.to_string kn) |]),
           add_constant kn acc)
       | Term.Construct ((ind,c),pu) ->
          (* FIXME: take universe constraints into account *)
@@ -426,7 +426,7 @@ struct
 	  begin
 	    let (params,result,acc) = quote_type acc env mi in
 	    let ref_name =
-	      quote_string (Names.string_of_kn (Names.canonical_mind mi)) in
+	      quote_string (Names.KerName.to_string (Names.canonical_mind mi)) in
 	    visited_types := Mindset.add t !visited_types ;
 	    constants := Term.mkApp (pType, [| ref_name; params
 					     ; result |]) :: !constants
@@ -436,14 +436,14 @@ struct
 	else
 	  begin
 	    visited_terms := Names.KNset.add kn !visited_terms ;
-            let c = Names.Constant.make kn kn in
+            let c = Names.Constant.make1 kn in
 	    let cd = Environ.lookup_constant c env in
 	    let do_body body =
 	      let (result,acc) =
 		quote_term acc (Global.env ()) body
 	      in
 	      constants := Term.mkApp (pConstr,
-				       [| quote_string (Names.string_of_kn kn)
+				       [| quote_string (Names.KerName.to_string kn)
 				       ; result |]) :: !constants
 	    in
 	    Declarations.(
@@ -456,12 +456,12 @@ struct
 		    | TemplateArity _ -> assert false
 		  in
 		  constants := Term.mkApp (pAxiom,
-					   [| quote_string (Names.string_of_kn kn) ; ty |]) :: !constants
+					   [| quote_string (Names.KerName.to_string kn) ; ty |]) :: !constants
 		end
 	      | Def cs ->
 		do_body (Mod_subst.force_constr cs)
 	      | OpaqueDef lc ->
-		do_body (Opaqueproof.force_proof (Global.opaque_tables ()) lc))
+		do_body (Opaqueproof.force_proof (Environ.opaque_tables (Global.env ())) lc))
 	  end
     in
     let (quote_rem,quote_typ) =
@@ -561,11 +561,11 @@ struct
   let unquote_sort trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h sType then
-      Term.type1_sort
+      Sorts.type1
     else if Term.eq_constr h sProp then
-      Term.prop_sort
+      Sorts.prop
     else if Term.eq_constr h sSet then
-      Term.set_sort
+      Sorts.set
     else
       raise (Failure "ill-typed, expected sort")
 
@@ -573,9 +573,9 @@ struct
     let ss = List.rev (Str.split (Str.regexp (Str.quote ".")) s) in
     match ss with
       nm :: rst ->
-	let rec to_mp ls = Names.MPfile (Names.make_dirpath (List.map Names.id_of_string ls)) in
+	let rec to_mp ls = Names.MPfile (Names.DirPath.make (List.map Names.id_of_string ls)) in
 	let mp = to_mp rst in
-	Names.make_kn mp Names.empty_dirpath (Names.mk_label nm)
+	Names.make_kn mp Names.DirPath.empty (Names.Label.make nm)
     | _ -> assert false
 
   let denote_inductive trm =
