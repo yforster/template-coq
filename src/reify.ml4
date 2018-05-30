@@ -72,10 +72,18 @@ let hnf_type env ty =
   in
   hnf_type true ty
 
+(* Remove '#' from names *)
+let clean_name s =
+  let l = List.rev (CString.split '#' s) in
+  match l with
+    s :: rst -> s
+  | [] -> raise (Failure "Empty name cannot be quoted")
+
 let split_name s : (Names.DirPath.t * Names.Id.t) =
   let ss = List.rev (CString.split '.' s) in
   match ss with
     nm :: rst ->
+     let nm = clean_name nm in
      let dp = (Names.make_dirpath (List.map Names.id_of_string rst)) in (dp, Names.Id.of_string nm)
   | [] -> raise (Failure "Empty name cannot be quoted")
 
@@ -988,9 +996,8 @@ struct
     in evd, u
 
   let unquote_kn (k : quoted_kernel_name) : Libnames.qualid =
-    let s = unquote_string k in
-    Libnames.qualid_of_string s
-
+    Libnames.qualid_of_string (clean_name (unquote_string k))
+    
   let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
     let (h,args) = app_full qp [] in
     match args with
@@ -1933,7 +1940,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm,env) = Lemmas.get_current_context () in
 	let def,uctx = Constrintern.interp_constr env evm def in
 	let trm = TermReify.quote_term env def in
@@ -1943,7 +1950,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm,env) = Lemmas.get_current_context () in
 	let def, uctx = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
@@ -1956,7 +1963,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm,env) = Lemmas.get_current_context () in
 	let def, uctx = Constrintern.interp_constr env evm def in
 	let trm = TermReify.quote_term_rec env def in
@@ -1967,7 +1974,7 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm, env) = Lemmas.get_current_context () in
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evdref = ref (Evd.from_ctx uctx) in
@@ -1978,7 +1985,7 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac_red CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm, env) = Lemmas.get_current_context () in
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
@@ -1992,7 +1999,7 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm,env) = Lemmas.get_current_context () in
 	let (body,uctx) = Constrintern.interp_constr env evm def in
         Denote.declare_inductive env evm body ]
@@ -2000,7 +2007,7 @@ END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
     | [ "Run" "TemplateProgram" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm, env) = Lemmas.get_current_context () in
         let (def, _) = Constrintern.interp_constr env evm def in
         (* todo : uctx ? *)
@@ -2009,7 +2016,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
     | [ "Test" "Quote" constr(c) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm,env) = Lemmas.get_current_context () in
 	let c = Constrintern.interp_constr env evm c in
 	let result = TermReify.quote_term env (fst c) in
