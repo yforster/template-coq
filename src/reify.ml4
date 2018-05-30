@@ -79,11 +79,11 @@ let clean_name s =
     s :: rst -> s
   | [] -> raise (Failure "Empty name cannot be quoted")
 
-let split_name s : (Names.DirPath.t * Names.Id.t) =
+let split_name ?(clean=true) (* clean hashes? *) s : (Names.DirPath.t * Names.Id.t) =
   let ss = List.rev (CString.split '.' s) in
   match ss with
     nm :: rst ->
-     let nm = clean_name nm in
+     let nm = if clean then clean_name nm else nm in
      let dp = (Names.make_dirpath (List.map Names.id_of_string rst)) in (dp, Names.Id.of_string nm)
   | [] -> raise (Failure "Empty name cannot be quoted")
 
@@ -1747,7 +1747,7 @@ struct
          let original_program_flag = !Flags.program_mode in
          Flags.program_mode := true;
          do_definition (unquote_ident name) evm kind None (EConstr.to_constr evm hole) typ
-                               (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
+           (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
                                                             let evm, t = Evd.fresh_global env evm gr in k (evm, t)));
          Flags.program_mode := original_program_flag
          (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
@@ -1785,19 +1785,22 @@ struct
          let (evm, name) = reduce_all env evm name in
          let name = unquote_string name in
          let (dp, nm) = split_name name in
-         (match Nametab.locate (Libnames.make_qualid dp nm) with
-          | Globnames.IndRef ni ->
-             let t = TermReify.quote_mind_decl env (fst ni) in
-             let _, args = Term.destApp t in
-             (match args with
-              | [|kn; decl|] ->
-                 k (evm, decl)
-              | _ -> bad_term_verb t "anomaly in quoting of inductive types")
+         (try
+            (match Nametab.locate (Libnames.make_qualid dp nm) with
+             | Globnames.IndRef ni ->
+                let t = TermReify.quote_mind_decl env (fst ni) in
+                let _, args = Term.destApp t in
+                (match args with
+                 | [|kn; decl|] ->
+                    k (evm, decl)
+                 | _ -> bad_term_verb t "anomaly in quoting of inductive types")
+             | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive."))
+             with
+               Not_found -> CErrors.user_err (str name ++ str " not found. This might happen if " ++ str name ++ str " is declared in the same section you are unquoting in."))
                (* quote_mut_ind produce an entry rather than a decl *)
           (* let c = Environ.lookup_mind (fst ni) env in (\* FIX: For efficienctly, we should also export (snd ni)*\) *)
           (* TermReify.quote_mut_ind env c *)
-          | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive."))
-      (* k (evm, entry) *)
+                (* k (evm, entry) *)
       | _ -> monad_failure "tmQuoteInductive" 1
     else if Term.eq_constr coConstr tmQuoteConstant then
       match args with
