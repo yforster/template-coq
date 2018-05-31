@@ -1686,6 +1686,8 @@ struct
     CErrors.user_err  (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".")
                        ++ str "Please file a bug with Template-Coq.")
 
+  let not_in_tactic s =
+    CErrors.user_err  (str ("You can not use " ^ s ^ " in a tactic."))
 
   let monad_failure_full s k prg =
     CErrors.user_err
@@ -1705,7 +1707,7 @@ struct
     ignore(Obligations.add_definition
              ident ~term:c cty ctx ?pl ~kind:k ~hook obls)
     
-  let rec run_template_program_rec (k : Evd.evar_map * Term.constr -> unit)  ((evm, pgm) : Evd.evar_map * Term.constr) : unit =
+  let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Term.constr -> unit)  ((evm, pgm) : Evd.evar_map * Term.constr) : unit =
     let env = Global.env () in
     let (evm, pgm) = reduce_hnf env evm pgm in
     let (coConstr, args) = app_full pgm [] in
@@ -1716,9 +1718,10 @@ struct
     else if Term.eq_constr coConstr tmBind then
       match args with
       | _::_::a::f::[] ->
-         run_template_program_rec (fun (evm, ar) -> run_template_program_rec k (evm, Term.mkApp (f, [|ar|]))) (evm, a)
+         run_template_program_rec ~intactic:intactic (fun (evm, ar) -> run_template_program_rec ~intactic:intactic k (evm, Term.mkApp (f, [|ar|]))) (evm, a)
       | _ -> monad_failure_full "tmBind" 4 pgm
     else if Term.eq_constr coConstr tmDefinition then
+      if intactic then not_in_tactic "tmDefinition" else
       match args with
       | name::s::typ::body::[] ->
          let (evm, name) = reduce_all env evm name in
@@ -1728,6 +1731,7 @@ struct
          k (evm, Term.mkConst n)
       | _ -> monad_failure "tmDefinition" 4
     else if Term.eq_constr coConstr tmAxiom then
+      if intactic then not_in_tactic "tmAxiom" else
       match args with
       | name::typ::[] ->
          let (evm, name) = reduce_all env evm name in
@@ -1737,6 +1741,7 @@ struct
          k (evm, Term.mkConst n)
       | _ -> monad_failure "tmAxiom" 2
     else if Term.eq_constr coConstr tmLemma then
+      if intactic then not_in_tactic "tmLemma" else
       match args with
       | name::s::typ::[] ->
          let (evm, name) = reduce_all env evm name in
@@ -1758,6 +1763,7 @@ struct
                             (* )); *)
       | _ -> monad_failure "tmLemma" 2
     else if Term.eq_constr coConstr tmMkDefinition then
+      if intactic then not_in_tactic "tmMkDefinition" else
       match args with
       | name::body::[] ->
          let (evm, name) = reduce_all env evm name in
@@ -1895,6 +1901,7 @@ struct
                     k (evm, quote_ident name')
       | _ -> monad_failure "tmFreshName" 1
     else if Term.eq_constr coConstr tmExistingInstance then
+      if intactic then not_in_tactic "tmExistingInstance" else
       match args with
       | name :: [] -> Classes.existing_instance true (Libnames.Ident (None, unquote_ident name)) None
       | _ -> monad_failure "tmExistingInstance" 1
@@ -2052,6 +2059,16 @@ VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
         let (def, _) = Constrintern.interp_constr env evm def in
         (* todo : uctx ? *)
         Denote.run_template_program_rec (fun _ -> ()) (evm, def) ]
+END;;
+
+TACTIC EXTEND run_program
+    | [ "run_template_program" constr(c) ] ->
+      [ Proofview.Goal.enter (begin fun gl ->
+         let env = Proofview.Goal.env gl in
+         let evm = Proofview.Goal.sigma gl in
+         Denote.run_template_program_rec ~intactic:true (fun (evm, t) -> ())  (evm, EConstr.to_constr evm c);
+         Proofview.tclUNIT ()
+       end) ]
 END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
