@@ -1725,7 +1725,6 @@ struct
       match args with
       | name::s::typ::body::[] ->
          let (evm, name) = reduce_all env evm name in
-         (* todo: let the user choose the reduction used for the type *)
          let (evm, typ) = (match denote_option s with Some s -> let red = denote_reduction_strategy evm s in reduce_all ~red env evm typ | None -> (evm, typ)) in
          let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Evd.universe_context_set evm) in
          k (evm, Term.mkConst n)
@@ -1747,20 +1746,15 @@ struct
          let (evm, name) = reduce_all env evm name in
          let (evm, typ) = (match denote_option s with Some s -> let red = denote_reduction_strategy evm s in reduce_all ~red env evm typ | None -> (evm, typ)) in
          let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.Definition) in
-         let (evm, hole) = Evarutil.new_evar env evm (EConstr.of_constr typ) in
-         (* let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in *)
+         (* Note the new environment evd knowing about the evar *)
+         let (evd, hole) = Evarutil.new_evar env evm (EConstr.of_constr typ) in
          let original_program_flag = !Flags.program_mode in
          Flags.program_mode := true;
-         do_definition (unquote_ident name) evm kind None (EConstr.to_constr evm hole) typ
+         (* Note that the hole is converted to constr using the _old_ environment evm *)
+         do_definition (unquote_ident name) evd kind None (EConstr.to_constr evm hole) typ
            (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
                                                             let evm, t = Evd.fresh_global env evm gr in k (evm, t)));
          Flags.program_mode := original_program_flag
-         (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
-         (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
-                            (* (Lemmas.mk_hook (fun _ gr -> *)
-                                 (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
-                                 (* k (env, evm, unit_tt) *)
-                            (* )); *)
       | _ -> monad_failure "tmLemmaRed" 2
     else if Term.eq_constr coConstr tmMkDefinition then
       if intactic then not_in_tactic "tmMkDefinition" else
