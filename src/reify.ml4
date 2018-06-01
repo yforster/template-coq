@@ -1755,7 +1755,7 @@ struct
            (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
                                                             let evm, t = Evd.fresh_global env evm gr in k (evm, t)));
          Flags.program_mode := original_program_flag
-      | _ -> monad_failure "tmLemmaRed" 2
+      | _ -> monad_failure "tmLemmaRed" 3
     else if Term.eq_constr coConstr tmMkDefinition then
       if intactic then not_in_tactic "tmMkDefinition" else
       match args with
