@@ -536,6 +536,7 @@ let monad_failure_full s k prg =
        str "Please file a bug with Template-Coq.")
 
 let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t -> unit) env ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
+  let env = if intactic then env else Global.env () in
   let pgm = Reduction.whd_all env pgm in
   let (coConstr, args) = app_full pgm [] in
   let (glob_ref, universes) =
