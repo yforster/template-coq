@@ -125,6 +125,28 @@ Program Definition infer_and_print_template_program {cf : checker_flags} (p : As
     inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error Σ e ++ ", while checking " ++ id)
   end.
 
+Program Definition run_hnf cf (p : Ast.program)
+  : EnvCheck term :=
+  let Σ := List.rev (trans_global (AstUtils.empty_ext p.1)).1 in
+  G <- check_wf_env (cf := cf) Σ ;;
+  ret (Monad := envcheck_monad) (@hnf cf (PCUICAstUtils.empty_ext Σ) _ nil (trans p.2) _).
+Next Obligation.
+  todo "TODO".
+Qed.
+
+Program Definition compute_and_print_template_program {cf : checker_flags} (p : Ast.program) 
+  : string + string :=
+  let p := fix_program_universes p in
+  match run_hnf cf p return string + string with
+  | CorrectDecl t =>
+    inl ("Environment is well-formed and " ++ print_term (trans_global (AstUtils.empty_ext p.1)) [] (trans p.2) ++
+         " has normal form: " ++ print_term (trans_global (AstUtils.empty_ext p.1)) [] t)
+  | EnvError Σ (AlreadyDeclared id) =>
+    inr ("Already declared: " ++ id)
+  | EnvError Σ (IllFormedDecl id e) =>
+    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error Σ e ++ ", while checking " ++ id)
+  end.
+
 (* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)
 (*   : EnvCheck (∥ trans_global (AstUtils.empty_ext (List.rev p.1)) ;;; [] |- trans p.2 : trans ty ∥) := *)
 (*   p <- typecheck_program (cf:=cf) ((trans_global (AstUtils.empty_ext p.1)).1, trans p.2) ;; *)

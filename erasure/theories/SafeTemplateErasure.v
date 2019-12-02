@@ -39,6 +39,15 @@ Existing Instance extraction_checker_flags.
 
 Local Open Scope string_scope.
 
+Program Definition run_hnf (p : Ast.program)
+  : EnvCheck term :=
+  let Σ := List.rev (trans_global (AstUtils.empty_ext p.1)).1 in
+  G <- check_wf_env (cf := extraction_checker_flags) Σ ;;
+  ret (Monad := envcheck_monad) (@hnf MetaCoq.Template.config.extraction_checker_flags (PCUICAstUtils.empty_ext Σ) _ nil (trans p.2) _).
+Next Obligation.
+  todo "TODO".
+Qed.  
+  
 Program Definition erase_template_program_check (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
   let Σ := List.rev (trans_global (AstUtils.empty_ext p.1)).1 in

@@ -41,6 +41,28 @@ VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
   ]
 END
 
+let compute env evm (c, ustate) =
+  Feedback.msg_debug (str"Quoting");
+  let term = time (str"Quoting") (Ast_quoter.quote_term_rec env) (EConstr.to_constr evm c) in
+  let uctx = UState.context_set ustate in
+  Feedback.msg_debug (str"Universes added: " ++ Printer.pr_universe_ctx_set evm uctx);
+  let uctx = Universes0.Monomorphic_ctx (Ast_quoter.quote_univ_contextset uctx) in
+  let check =
+    SafeTemplateChecker.compute_and_print_template_program
+         Config0.default_checker_flags term
+  in
+  match check with
+  | Coq_inl s -> Feedback.msg_info (pr_char_list s)
+  | Coq_inr s -> CErrors.user_err ~hdr:"metacoq" (pr_char_list s)
+
+VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
+  | [ "MetaCoq" "Compute" constr(c) ] -> [
+      let (evm,env) = Pfedit.get_current_context () in
+      let c = Constrintern.interp_constr env evm c in
+      compute env evm c
+    ]
+END
+
 let retypecheck_term_dependencies env gr =
   let typecheck env c = ignore (Typeops.infer env c) in
   let typecheck_constant c =
