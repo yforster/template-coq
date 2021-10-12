@@ -2603,6 +2603,8 @@ Proof.
               apply IHon_ctype_positive.
             + clear -on_ctype_variance.
               intros v indv. admit.
+            + destruct lets_in_constructor_types; cbn in *; auto.
+              admit. 
         --- simpl; intros. have onp := X1.(ST.onProjections).
             admit.
         --- have inds := X1.(ST.ind_sorts).
