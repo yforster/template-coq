@@ -52,7 +52,7 @@ struct
   let resolve (tm : string) : Constr.t Lazy.t =
     lazy (
       let tm_ref = Coqlib.lib_ref tm in
-      UnivGen.constr_of_monomorphic_global tm_ref
+      UnivGen.constr_of_monomorphic_global (Global.env ()) tm_ref
     )
     (* gen_constant_in_modules contrib_name [path] tm *)
 
@@ -121,12 +121,11 @@ struct
   let nNamed = ast "nNamed"
   let kVmCast = ast "VmCast"
   let kNative = ast "NativeCast"
-  let kRevertCast = ast "RevertCast"
   let kCast = ast "Cast"
   let lSProp = ast "universe.lsprop"
   let lProp = ast "universe.lprop"
   let lnpe = ast "universe.lnpe"
-  let lzero = ast "level.lzero"
+  let lSet = ast "level.lSet"
   let tsort_family = ast "sort_family"
   let lfresh_universe = ast "fresh_universe"
   let lfresh_level = ast "fresh_level"
@@ -176,7 +175,7 @@ struct
   let tof_levels = ast "universe.of_levels"
   let tLevelSet_of_list = ast "universe.of_list"
 
-  let noprop_tSet = ast "noproplevel.lzero"
+  let noprop_tSet = ast "noproplevel.lSet"
   let noprop_tLevel = ast "noproplevel.Level"
   let noprop_tLevelVar = ast "noproplevel.Var"
   let univexpr_lProp = ast "univexpr.prop"
@@ -190,6 +189,7 @@ struct
   let cMonomorphic_ctx = ast "Monomorphic_ctx"
   let cPolymorphic_ctx = ast "Polymorphic_ctx"
   let tUContext = ast "UContext.t"
+  let tUContextmake' = ast "UContext.make'"
   let tAUContext = ast "AUContext.t"
   let tUContextmake = ast "UContext.make"
   let tAUContextmake = ast "AUContext.make"
