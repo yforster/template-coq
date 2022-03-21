@@ -362,13 +362,13 @@ Inductive env_error :=
 | IllFormedDecl (e : string) (e : type_error)
 | AlreadyDeclared (id : string).
 
-Inductive EnvCheck  (A : Type) :=
+Inductive EnvCheck (A : Type) :=
 | CorrectDecl (a : A)
-| EnvError (Σ : env) (e : env_error).
-Global Arguments EnvError {env} {A} Σ e.
-Global Arguments CorrectDecl {env} {A} a.
+| EnvError (Σ : global_env_ext) (e : env_error).
+Global Arguments EnvError {A} Σ e.
+Global Arguments CorrectDecl {A} a.
 
-Global Instance envcheck_monad {B} : Monad (EnvCheck B) :=
+Global Instance envcheck_monad : Monad EnvCheck :=
   {| ret A a := CorrectDecl a ;
       bind A B m f :=
         match m with
@@ -377,8 +377,8 @@ Global Instance envcheck_monad {B} : Monad (EnvCheck B) :=
         end
   |}.
 
-Global Instance envcheck_monad_exc {B}
-  : MonadExc (B * env_error) (EnvCheck B) :=
+Global Instance envcheck_monad_exc
+  : MonadExc (global_env_ext * env_error) EnvCheck :=
   { raise A '(g, e) := EnvError g e;
     catch A m f :=
       match m with

@@ -1326,15 +1326,6 @@ Proof.
   destruct destArity as [[? ?]|] eqn:da; auto.
 Qed.
 
-Lemma lookup_env_closed {Σ kn decl} : ETyping.closed_env Σ -> ETyping.lookup_env Σ kn = Some decl -> ETyping.closed_decl decl.
-Proof.
-  induction Σ; cbn => //.
-  move/andP => [] cla cle.
-  unfold eq_kername; destruct kername_eq_dec.
-  move=> [= <-]. apply cla.
-  now eapply IHΣ.
-Qed.
-
 Lemma erases_closed Σ Γ t t' : Σ;;; Γ |- t ⇝ℇ t' -> PCUICAst.closedn #|Γ| t -> ELiftSubst.closedn #|Γ| t'.
 Proof.
   induction 1 using erases_forall_list_ind; cbn; auto; try solve [rtoProp; repeat solve_all].
