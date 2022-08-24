@@ -42,7 +42,7 @@ Section print_term.
     | tConst c u => "x"
     | tInd (mkInd i k) u =>
       match lookup_ind_decl i k with
-      | Some body => String.substring 0 1 (body.(ind_name))
+      | Some body => Bytestring.substring 0 1 (body.(ind_name))
       | None => "X"
       end
     (* | tInt _ => "i" *)
@@ -112,7 +112,7 @@ Section print_term.
 End print_term.
 
 Module PrintTermTree.
-  Import bytestring.Tree.
+  Import bytestringtree.Tree.
   Infix "^" := append.
 
   Section env.
@@ -136,7 +136,7 @@ Module PrintTermTree.
     | Universe.lType l =>
       if with_universes then
         ("Type(" ++
-           MCString.string_of_list string_of_level_expr (LevelExprSet.elements l) ++
+           bytestringutil.string_of_list string_of_level_expr (LevelExprSet.elements l) ++
           ")")%bs
        else "Type"
     end.

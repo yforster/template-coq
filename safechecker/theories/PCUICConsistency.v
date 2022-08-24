@@ -30,20 +30,20 @@ Local Opaque hnf.
 Fixpoint string_repeat c (n : nat) : string :=
   match n with
   | 0 => ""
-  | S n => String.String c (string_repeat c n)
+  | S n => Bytestring.String c (string_repeat c n)
   end.
 
 Lemma string_repeat_length c n :
-  String.length (string_repeat c n) = n.
+  Bytestring.length (string_repeat c n) = n.
 Proof.
   induction n; cbn; auto with arith.
 Qed.
 
 Definition max_name_length (Σ : global_declarations) : nat :=
-  fold_right max 0 (map (fun '(kn, _) => String.length (string_of_kername kn)) Σ).
+  fold_right max 0 (map (fun '(kn, _) => Bytestring.length (string_of_kername kn)) Σ).
 
 Lemma max_name_length_ge Σ :
-  Forall (fun '(kn, _) => String.length (string_of_kername kn) <= max_name_length Σ) Σ.
+  Forall (fun '(kn, _) => Bytestring.length (string_of_kername kn) <= max_name_length Σ) Σ.
 Proof.
   induction Σ as [|(kn&decl) Σ IH]; cbn; constructor.
   - lia.

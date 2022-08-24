@@ -133,11 +133,11 @@ Section Branch.
   Derive NoConfusion for branch.
 
   Definition string_of_branch (f : term -> string) (b : branch) :=
-  "([" ^ String.concat "," (map (string_of_name ∘ binder_name ∘ decl_name) (bcontext b)) ^ "], "
+  "([" ^ Bytestring.concat "," (map (string_of_name ∘ binder_name ∘ decl_name) (bcontext b)) ^ "], "
   ^ f (bbody b) ^ ")".
 
   Definition pretty_string_of_branch (f : term -> string) (b : branch) :=
-    String.concat " " (map (string_of_name ∘ binder_name ∘ decl_name) (bcontext b)) ^ " => " ^ f (bbody b).
+    Bytestring.concat " " (map (string_of_name ∘ binder_name ∘ decl_name) (bcontext b)) ^ " => " ^ f (bbody b).
   
   Definition test_branch (pctx : term -> bool) (p : term -> bool) (b : branch) :=
     test_context pctx b.(bcontext) && p b.(bbody).
@@ -607,9 +607,9 @@ Local Ltac fcase c :=
   case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
 
 Definition string_of_predicate {term} (f : term -> string) (p : predicate term) :=
-  "(" ^ "(" ^ String.concat "," (map f (pparams p)) ^ ")" 
+  "(" ^ "(" ^ Bytestring.concat "," (map f (pparams p)) ^ ")" 
   ^ "," ^ string_of_universe_instance (puinst p)
-  ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name ∘ decl_name) (pcontext p)) ^ ")"
+  ^ ",(" ^ Bytestring.concat "," (map (string_of_name ∘ binder_name ∘ decl_name) (pcontext p)) ^ ")"
   ^ "," ^ f (preturn p) ^ ")".
 
 Definition eqb_predicate_gen (eqb_univ_instance : Instance.t -> Instance.t -> bool)

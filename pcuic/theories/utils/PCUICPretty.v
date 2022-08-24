@@ -47,7 +47,7 @@ Section fresh.
     | tConst c u => "x"
     | tInd (mkInd i k) u =>
       match lookup_ind_decl Σ i k with
-      | Some (_, body) => String.substring 0 1 (body.(ind_name))
+      | Some (_, body) => Bytestring.substring 0 1 (body.(ind_name))
       | None => "X"
       end
     | _ => "U"
@@ -114,7 +114,7 @@ End fresh.
 Module PrintTermTree.
   Section env.
     Context (Σ : global_env_ext).
-    Import bytestring.Tree.
+    Import bytestringtree.Tree.
     Infix "^" := append.
 
     Section Aux.
@@ -222,7 +222,7 @@ Module PrintTermTree.
         let ret_binders := firstn #|pcontext p| Γret in
         let (as_name, indices) := (hd "_" ret_binders, MCList.rev (tail ret_binders)) in
         let in_args := (repeat "_" #|pparams p| ++ indices)%list in
-        let in_str := oib.(ind_name) ^ concat "" (map (fun a : String.t => " " ^ a) in_args) in
+        let in_str := oib.(ind_name) ^ concat "" (map (fun a : Bytestring.t => " " ^ a) in_args) in
 
         let brs := map (fun br => 
             let (Γctx, pctx) := 
@@ -264,7 +264,7 @@ Module PrintTermTree.
     end.
   End env.
 
-  Import bytestring.Tree.
+  Import bytestringtree.Tree.
   Infix "^" := append.
 
   Section env.

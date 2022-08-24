@@ -29,7 +29,7 @@ Proof.
         -- assumption.
 Qed.
 
-Definition tDummy := tVar String.EmptyString.
+Definition tDummy := tVar Bytestring.EmptyString.
 Definition dummy_branch : branch term := mk_branch [] tDummy.
 
 (** ** Reduction *)

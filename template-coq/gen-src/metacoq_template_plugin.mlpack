@@ -76,6 +76,10 @@ MCUtils
 Signature
 All_Forall
 Config0
+Bytestring
+Bytestring0
+Bytestringtree
+Bytestringutil
 Kernames
 BasicAst
 Universes0

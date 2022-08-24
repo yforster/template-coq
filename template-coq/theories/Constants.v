@@ -4,9 +4,9 @@ From MetaCoq.Template Require Import bytestring BasicAst uGraph TemplateMonad
 
 (* Base types *)
 
-Register bytestring.String.t as metacoq.string.type.
-Register bytestring.String.EmptyString as metacoq.string.nil.
-Register bytestring.String.String as metacoq.string.cons.
+Register bytestring.Bytestring.t as metacoq.string.type.
+Register bytestring.Bytestring.EmptyString as metacoq.string.nil.
+Register bytestring.Bytestring.String as metacoq.string.cons.
 
 Register Coq.Init.Byte.byte as metacoq.byte.type.
 

@@ -15,17 +15,17 @@ Definition string_of_float (f : PrimFloat.float) :=
   "<float>".
 
 Module string_of_term_tree.
-  Import bytestring.Tree.
+  Import bytestringtree.Tree.
   Infix "^" := append.
 
   Definition string_of_predicate {term} (f : term -> t) (p : predicate term) :=
     "(" ^ "(" ^ concat "," (map f (pparams p)) ^ ")" 
     ^ "," ^ string_of_universe_instance (puinst p)
-    ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
+    ^ ",(" ^ Bytestring.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
     ^ "," ^ f (preturn p) ^ ")".
   
   Definition string_of_branch (f : term -> t) (b : branch term) :=
-    "([" ^ String.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
+    "([" ^ Bytestring.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
     ^ f (bbody b) ^ ")".
     
   Definition string_of_def {A} (f : A -> t) (def : def A) :=

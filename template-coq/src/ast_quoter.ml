@@ -10,7 +10,7 @@ open Caml_bytestring
 module ExtractedASTBaseQuoter =
 struct
   type t = Ast0.term
-  type quoted_ident = Bytestring.String.t
+  type quoted_ident = Bytestring.Bytestring.t
   type quoted_int = Datatypes.nat
   type quoted_int63 = Uint63.t
   type quoted_float64 = Float64.t

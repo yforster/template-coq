@@ -52,7 +52,7 @@ Module DirPathOT := ListOrderedType IdentOT.
 #[global] Instance dirpath_eqdec : Classes.EqDec dirpath := _.
 
 Definition string_of_dirpath (dp : dirpath) : string := 
-  String.concat "." (List.rev dp).
+  Bytestring.concat "." (List.rev dp).
 
 (** The module part of the kernel name.
     - MPfile is for toplevel libraries, i.e. .vo files

@@ -57,9 +57,9 @@ Global Instance predicate_eq_dec term :
 Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
 Definition string_of_predicate {term} (f : term -> string) (p : predicate term) :=
-  "(" ^ "(" ^ String.concat "," (map f (pparams p)) ^ ")" 
+  "(" ^ "(" ^ Bytestring.concat "," (map f (pparams p)) ^ ")" 
   ^ "," ^ string_of_universe_instance (puinst p)
-  ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
+  ^ ",(" ^ Bytestring.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
   ^ "," ^ f (preturn p) ^ ")".
 
 Definition test_predicate {term}
@@ -212,11 +212,11 @@ Section Branch.
   Proof using Type. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
   Definition string_of_branch (f : term -> string) (b : branch) :=
-  "([" ^ String.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
+  "([" ^ Bytestring.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
   ^ f (bbody b) ^ ")".
 
   Definition pretty_string_of_branch (f : term -> string) (b : branch) :=
-    String.concat " " (map (string_of_name ∘ binder_name) (bcontext b)) ^ " => " ^ f (bbody b).
+    Bytestring.concat " " (map (string_of_name ∘ binder_name) (bcontext b)) ^ " => " ^ f (bbody b).
   
   Definition test_branch (bodyf : term -> bool) (b : branch) :=
     bodyf b.(bbody).

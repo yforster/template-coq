@@ -136,7 +136,7 @@ Module PrintTermTree.
         let brs := combine brs oib.(ind_ctors) in
         parens top ("match " ^ print_term Γ true false t ^
                     " with " ^ nl ^
-                    print_list (fun '(b, cstr) => (cstr.(cstr_name) : String.t) ^ " " ^ b)
+                    print_list (fun '(b, cstr) => (cstr.(cstr_name) : Bytestring.t) ^ " " ^ b)
                     (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
       | None =>
         "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","

@@ -44,7 +44,7 @@ Proof.
   let wf_proof := eval hnf in (make_wf_env_ext gctx) in 
   match wf_proof with
   | CorrectDecl _ ?x => exact x
-  | _ => fail "Couldn't prove the global environment is well-formed"
+  | y => pose y
   end.
 Defined.
 

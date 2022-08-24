@@ -120,8 +120,6 @@ gen-src/primFloat.mli
 gen-src/primFloat.ml
 #gen-src/decimalString.mli
 #gen-src/decimalString.ml
-gen-src/mCString.ml
-gen-src/mCString.mli
 gen-src/mCUtils.ml
 gen-src/mCUtils.mli
 gen-src/mSetDecide.ml
@@ -190,10 +188,14 @@ gen-src/caml_byte.mli
 gen-src/caml_byte.ml
 gen-src/byteCompare.mli
 gen-src/byteCompare.ml
-gen-src/byteCompareSpec.mli
-gen-src/byteCompareSpec.ml
 gen-src/bytestring.mli
 gen-src/bytestring.ml
+gen-src/bytestring0.mli
+gen-src/bytestring0.ml
+gen-src/bytestringtree.mli
+gen-src/bytestringtree.ml
+gen-src/bytestringutil.ml
+gen-src/bytestringutil.mli
 gen-src/caml_bytestring.ml
 gen-src/tm_util.ml
 gen-src/kernames.mli
