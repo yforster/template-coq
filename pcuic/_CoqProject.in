@@ -111,7 +111,6 @@ theories/Bidirectional/BDStrengthening.v
 theories/PCUICWeakeningEnv.v
 
 theories/PCUICUnshadow.v
-theories/PCUICSunny.v
 
 # theories/All.v
 
