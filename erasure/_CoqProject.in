@@ -36,4 +36,5 @@ theories/EInlineProjections.v
 theories/ETransform.v
 theories/EConstructorsAsBlocks.v
 theories/EWcbvEvalCstrsAsBlocksInd.v
+theories/EWcbvEvalCstrsAsBlocksFixLambdaInd.v
 theories/Erasure.v
