@@ -30,7 +30,11 @@ Local Ltac inv H := inversion H; subst.
 
 (* Tells if the evaluation relation should include match-prop and proj-prop reduction rules. 
   Also, are constructors represented as blocks or higher-order. *)
-Class WcbvFlags := { with_prop_case : bool ; with_guarded_fix : bool ; with_constructor_as_block : bool }.
+Variant fix_possibilities := guarded_fix_rule | unguarded_fix_rule | unguarded_fix_dont_touch_arg_rule.
+Coercion with_guarded_fix_rule (b : bool) :=
+  if b then guarded_fix_rule else unguarded_fix_rule.
+Notation is_guarded f := match f with guarded_fix_rule => true | _ => false end.
+Class WcbvFlags := { with_prop_case : bool ; with_guarded_fix : fix_possibilities ; with_constructor_as_block : bool }.
 
 Definition atom `{wfl : WcbvFlags} Σ t :=
   match t with
@@ -163,7 +167,7 @@ Section Wcbv.
 
   (** Fix unfolding, with guard *)
   | eval_fix f mfix idx argsv a av fn res :
-      forall guarded : with_guarded_fix,
+      forall guarded : with_guarded_fix = true,
       eval f (mkApps (tFix mfix idx) argsv) ->
       eval a av ->
       cunfold_fix mfix idx = Some (#|argsv|, fn) ->
@@ -172,7 +176,7 @@ Section Wcbv.
 
   (** Fix stuck, with guard *)
   | eval_fix_value f mfix idx argsv a av narg fn :
-      forall guarded : with_guarded_fix,
+      forall guarded : with_guarded_fix = true,
       eval f (mkApps (tFix mfix idx) argsv) ->
       eval a av ->
       cunfold_fix mfix idx = Some (narg, fn) ->
@@ -186,6 +190,14 @@ Section Wcbv.
     cunfold_fix mfix idx = Some (narg, fn) ->
     eval a av ->
     eval (tApp fn av) res ->
+    eval (tApp f a) res
+
+  (** Fix unfolding, without guard, do not evaluate a *)
+  | eval_fix'' f mfix idx a fn res narg :
+    forall unguarded : with_guarded_fix = unguarded_fix_dont_touch_arg_rule,
+    eval f (tFix mfix idx) ->
+    cunfold_fix mfix idx = Some (narg, fn) ->
+    eval (tApp fn a) res ->
     eval (tApp f a) res
 
   (** CoFix-case unfolding *)
@@ -255,7 +267,7 @@ Section Wcbv.
   (** Atoms (non redex-producing heads) applied to values are values *)
   | eval_app_cong f f' a a' :
       eval f f' ->
-      ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f'
+      ~~ (isLambda f' || (if is_guarded with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f'
         || isPrimApp f')  ->
       eval a a' ->
       eval (tApp f a) (tApp f' a')
@@ -294,7 +306,7 @@ Section Wcbv.
      cunfold_fix mfix idx = Some (rarg, fn) ->
      (* If fixpoints are not guarded, we don't need to consider applied fixpoints 
         as value heads*)
-     (if with_guarded_fix then nargs <= rarg else False) ->
+     (if is_guarded with_guarded_fix then nargs <= rarg else False) ->
      value_head nargs (tFix mfix idx).
    Derive Signature NoConfusion for value_head.
  
@@ -401,7 +413,7 @@ Section eval_rect.
                           e1 e2))
             → (∀ (f5 : term) (mfix : mfixpoint term) 
                  (idx : nat) (argsv : list term) (a av fn res : term) 
-                 (guarded : with_guarded_fix) (e : 
+                 (guarded : with_guarded_fix = true) (e : 
                                                eval Σ f5
                                                  (mkApps 
                                                  (tFix mfix idx) argsv)),
@@ -417,7 +429,7 @@ Section eval_rect.
               → (∀ (f6 : term) (mfix : mfixpoint term) 
                    (idx : nat) (argsv : list term) 
                    (a av : term) (narg : nat) (fn : term) 
-                   (guarded : with_guarded_fix) (e : 
+                   (guarded : with_guarded_fix = true) (e : 
                                                  eval Σ f6
                                                  (mkApps 
                                                  (tFix mfix idx) argsv)),
@@ -443,6 +455,17 @@ Section eval_rect.
                              → P (tApp f7 a) res
                                  (eval_fix' Σ f7 mfix idx a av fn res narg
                                     unguarded e e0 e1 e2))
+                → (∀ (f7 : term) (mfix : mfixpoint term) 
+                     (idx : nat) (a fn res : term) 
+                     (narg : nat) (unguarded : with_guarded_fix = unguarded_fix_dont_touch_arg_rule) 
+                     (e : eval Σ f7 (tFix mfix idx)),
+                     P f7 (tFix mfix idx) e
+                     → ∀ (e0 : cunfold_fix mfix idx = Some (narg, fn)),
+                         ∀ e2 : eval Σ (tApp fn a) res,
+                             P (tApp fn a) res e2
+                             → P (tApp f7 a) res
+                                 (eval_fix'' Σ f7 mfix idx a fn res narg
+                                    unguarded e e0 e2))
                   → (∀ (ip : inductive × nat) (mfix : mfixpoint term) 
                        (idx : nat) (args : list term) 
                        (discr : term) (narg : nat) 
@@ -576,7 +599,7 @@ Section eval_rect.
                                        → ∀ (i : ~~
                                                 (isLambda f'
                                                  || 
-                                                 (if with_guarded_fix
+                                                 (if is_guarded with_guarded_fix
                                                  then isFixApp f'
                                                  else isFix f') || 
                                                  isBox f'
@@ -594,7 +617,7 @@ Section eval_rect.
                                       → ∀ (t t0 : term) (e : eval Σ t t0),
                                          P t t0 e.
   Proof using Type.
-    intros ????????????????????? H.
+    intros ?????????????????????? H.
     revert t t0 H.
     fix aux 3.
     move aux at top.
@@ -738,8 +761,7 @@ Section Wcbv.
         destruct f; simpl in * |- *; try congruence.
         + rewrite !negb_or /= in i; rtoProp; intuition auto.
         + rewrite !negb_or /= in i; rtoProp; intuition auto.
-        + destruct with_guarded_fix.
-          now cbn in i. now cbn in i.
+        + destruct with_guarded_fix; now cbn in i.
         + constructor.
         + cbn in i. destruct with_guarded_fix; cbn in i; rtoProp; intuition auto.
         + econstructor; auto.
@@ -749,16 +771,15 @@ Section Wcbv.
         apply (value_app f [a']). 
         destruct f; simpl in * |- *; try congruence.
         + rewrite !negb_or /= in i; rtoProp; intuition auto.
-        + destruct with_guarded_fix. now cbn in i. now cbn in i.
+        + destruct with_guarded_fix; now cbn in i.
       * rewrite -[tApp _ _](mkApps_app _ (firstn n l) [a']).
         eapply value_app; eauto with pcuic. 2:eapply All_app_inv; auto.
         len.
         rewrite isFixApp_mkApps isConstructApp_mkApps // in i.
         rewrite !negb_or in i. rtoProp; intuition auto.
-        destruct with_guarded_fix eqn:gfix.
-        { destruct v; cbn in * => //. constructor. }
-      { destruct v; cbn in * => //; try now constructor.
-        now rewrite gfix in y. }
+        destruct with_guarded_fix eqn:gfix;
+         destruct v; cbn in * => //; try now constructor.
+        all: now rewrite gfix in y.
   Qed.
 
   Lemma value_head_spec n t :
@@ -875,7 +896,7 @@ Section Wcbv.
   Qed.
   
   Lemma eval_mkApps_tFix_inv mfix idx args v :
-   with_guarded_fix ->
+    with_guarded_fix = true ->
     eval (mkApps (tFix mfix idx) args) v ->
     (exists args', v = mkApps (tFix mfix idx) args' /\ #|args| = #|args'|) \/
     (exists n b, cunfold_fix mfix idx = Some (n, b) /\ n < #|args|).
@@ -890,7 +911,8 @@ Section Wcbv.
       all: try (eapply IHargs in ev1 as [(? & ? & Heq) | (? & ? & ? & ?)]; eauto; rewrite ?Heq; try solve_discr;
         len; rewrite ?Heq; rewrite Nat.add_comm; eauto 7).
       * invs H. eauto 9.
-      * invs H. left. exists (x0 ++ [av]). rewrite mkApps_app. cbn. split. eauto. len. 
+      * invs H. left. exists (x0 ++ [av]). rewrite mkApps_app. cbn. split. eauto. len.
+      * cbn in *. congruence. 
       * subst. rewrite isFixApp_mkApps in i => //. rewrite v in i. cbn in i.
         destruct isLambda; cbn in i; easy.
       * invs i.
@@ -916,7 +938,7 @@ Section Wcbv.
   Qed.
 
   Lemma eval_stuck_Fix {f mfix idx args args'} :
-    with_guarded_fix ->
+    with_guarded_fix = true ->
     eval f (tFix mfix idx) ->
     All2 eval args args' ->
     isStuckFix (tFix mfix idx) args ->
@@ -1064,6 +1086,11 @@ Section Wcbv.
   
   Set Equations With UIP.
 
+  Instance: EqDec fix_possibilities.
+  Proof.
+    red. decide equality.
+  Defined.
+
   Unset SsrRewrite.
   Lemma eval_unique_sig {t v v'} :
     forall (ev1 : eval t v) (ev2 : eval t v'),
@@ -1171,6 +1198,20 @@ Section Wcbv.
         cbn in *; subst.
         specialize (IHev2 _ ev'2). noconf IHev2.
         now specialize (IHev3 _ ev'3); noconf IHev3.
+      + exfalso. cbn in *. congruence.
+      + exfalso. rewrite unguarded in i.
+        specialize (IHev1 _ ev'1). depelim IHev1. easy.
+    - depelim ev'; try go.
+      + cbn in *. congruence.
+      + move: (IHev1 _ ev'1).
+        eapply DepElim.simplification_sigma1 => heq IHev1'.
+        assert (narg0 = narg) as -> by congruence.
+        assert (fn0 = fn) as -> by congruence.
+        noconf IHev1'.
+        assert (e0 = e) as -> by now apply uip.
+        rewrite (uip unguarded unguarded0).
+        cbn in *; subst.
+        specialize (IHev2 _ ev'2). now noconf IHev2.
       + exfalso. rewrite unguarded in i.
         specialize (IHev1 _ ev'1). depelim IHev1. easy.
     - depelim ev'; try go.
@@ -1256,6 +1297,8 @@ Section Wcbv.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rewrite guarded in i. rtoProp; intuition auto.
         rewrite isFixApp_mkApps in H3 => //.
+      + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
+        cbn in i. rewrite unguarded in i. now cbn in i.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rewrite unguarded in i. now cbn in i.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
@@ -1345,6 +1388,10 @@ Section Wcbv.
         exists f'; split => //.
         rewrite mkApps_app.
         eapply eval_fix'; eauto.
+      + specialize (IHargs _ _ ev1) as [f' [evf' ev]].
+        exists f'; split => //.
+        rewrite mkApps_app.
+        eapply eval_fix''; eauto.
       + specialize (IHargs _ _ ev1) as [f' [evf' ev]].
         exists f'; split => //.
         rewrite mkApps_app.
@@ -1568,6 +1615,8 @@ Proof.
     solve_all.
   - eapply IHev3. rtoProp. split; eauto.
     eapply closed_cunfold_fix; tea. eauto.
+  - eapply IHev2. rtoProp. split; eauto.
+    eapply closed_cunfold_fix; tea. eauto.
   - eapply IHev2. rewrite closedn_mkApps.
     rewrite closedn_mkApps in IHev1. 
     specialize (IHev1 Hc). move/andP: IHev1 => [Hfix Hargs].
@@ -1644,6 +1693,8 @@ Proof.
     eapply wellformed_cunfold_fix; tea => //.
   - eapply IHev3 => //. rtoProp; intuition auto.
     eapply wellformed_cunfold_fix => //; tea. cbn. rewrite H H1 H2 //.
+  - eapply IHev2 => //. rtoProp; intuition auto.
+    eapply wellformed_cunfold_fix => //; tea. cbn. rewrite H H1 //.
   - eapply IHev2. rewrite wellformed_mkApps //.
     rewrite wellformed_mkApps // in H2. 
     move/andP: H2 => [Hfix Hargs].
@@ -1692,7 +1743,7 @@ Qed.
 Local Hint Rewrite @remove_last_length : len.
 
 Lemma eval_mkApps_tFix_inv_size {wfl : WcbvFlags} Σ mfix idx args v :
-  with_guarded_fix ->
+  with_guarded_fix = true ->
   forall Heval : eval Σ (mkApps (tFix mfix idx) args) v,
   (∑ args', All2 (fun a a' => ∑ H : eval Σ a a', eval_depth H < eval_depth Heval) args args' ×
      v = mkApps (tFix mfix idx) (args')) +
@@ -1715,6 +1766,7 @@ Proof.
      econstructor. 2: econstructor.
      unshelve eexists. eauto. lia.
      now rewrite !mkApps_app.
+   * cbn in *. congruence.
    * subst f'. rewrite wg in i.
      rewrite isFixApp_mkApps /= /isFixApp /= in i.
      rewrite !negb_or in i; rtoProp; intuition auto. now cbn in H2.
@@ -1773,6 +1825,7 @@ Proof.
   
    all: try(specialize (IHargs) with (Heval := ev1); destruct IHargs as [[-> Heq] | (a & aval & args' & argsv_ & Heqargs & Hall & n & fn_ & Hunf & Heva & Hevasz & Hev' & Hevsz')];eauto; try rewrite ?Heq; try solve_discr; try congruence;
      len; try rewrite ?Heq; rewrite ?Nat.add_comm; eauto 9).
+   all: try now (cbn in *; congruence).
    * subst. cbn. exists a, aval, (args' ++ [x])%list,(argsv_ ++ [t'])%list. split. reflexivity.
       repeat unshelve eexists; eauto. 3:{ rewrite mkApps_app. econstructor. eauto. eapply size_final. eauto. }
       eapply All2_app.
@@ -1785,13 +1838,12 @@ Proof.
      repeat unshelve eexists; eauto.
      eapply All2_app.
      solve_all. right. destruct b0. unshelve eexists; eauto. lia.
-   unshelve econstructor. right. unshelve eexists. eauto. lia. repeat econstructor.
-   cbn in *; lia.
-   rewrite mkApps_app. cbn. econstructor; eauto. eapply size_final; eauto.
-   cbn. generalize (mkApps_app (tApp fn_ aval) argsv_ [a']). generalize (EAst.mkApps (tApp fn_ aval) (argsv_ ++ [a'])).
-   intros. subst. cbn.
-   destruct size_final. cbn in *. lia.
-  
+     unshelve econstructor. right. unshelve eexists. eauto. lia. repeat econstructor.
+     cbn in *; lia.
+     rewrite mkApps_app. cbn. econstructor; eauto. eapply size_final; eauto.
+     cbn. generalize (mkApps_app (tApp fn_ aval) argsv_ [a']). generalize (EAst.mkApps (tApp fn_ aval) (argsv_ ++ [a'])).
+     intros. subst. cbn.
+     destruct size_final. cbn in *. lia. 
    * invs Heq. exists x, av, [], []. repeat split. econstructor. repeat unshelve eexists; eauto.
      all:cbn; lia.
    * subst. cbn. eexists _, _, _, (argsv_ ++ [_])%list. repeat eexists. 2: eauto.
@@ -1822,10 +1874,9 @@ Proof.
      cbn in *; lia.
      cbn. generalize (mkApps_app (tApp fn_ aval) argsv_ [x]). generalize (EAst.mkApps (tApp fn_ aval) (argsv_ ++ [x])). intros. subst. cbn.
      cbn in *. lia.
-   * subst. cbn. invs i.
 Qed.
 
-Lemma eval_mkApps_inv' {wfl : WcbvFlags} Σ f args v :
+Lemma eval_mkApps_inv' {wfl : WcbvFlags} Σ f args v (Hwfl : with_guarded_fix <> unguarded_fix_dont_touch_arg_rule) :
   eval Σ (mkApps f args) v ->
   ∑ f' args', eval Σ f f' × All2 (eval Σ) args args' × eval Σ (mkApps f' args') v.
 Proof.
@@ -1859,6 +1910,7 @@ Proof.
       eapply All2_app; auto.
       rewrite mkApps_app. 
       eapply eval_fix'; eauto. eapply value_final, eval_to_value; tea.
+    + cbn in *; congruence.
     + specialize (IHargs _ _ ev1) as [f'' [args' [evf' [evars res]]]].
       exists f'', (args' ++ [a']); split => //. split => //.
       eapply All2_app; auto.
@@ -1911,7 +1963,7 @@ Proof.
     * invs i.
 Qed. 
 
-Lemma eval_mkApps_inv_size {wfl : WcbvFlags} {Σ f args v} :
+Lemma eval_mkApps_inv_size {wfl : WcbvFlags} {Σ f args v} (Hwfl : with_guarded_fix <> unguarded_fix_dont_touch_arg_rule) :
   forall ev : eval Σ (mkApps f args) v,
   ∑ f' args' (evf : eval Σ f f'),
     [× eval_depth evf <= eval_depth ev,
@@ -1975,6 +2027,7 @@ Proof.
       unshelve eexists. eapply eval_fix'; tea.
       exact (size_final _ _ _ ev2).π1. cbn.
       destruct size_final; cbn; lia.
+    + cbn in *; congruence.
     + specialize (IHargs _ _ ev1) as [f'' [args' [evf' [evfs evars [evres res]]]]].
       exists f'', (args' ++ [a']); exists evf'; split => //.
       cbn; lia.
@@ -1998,7 +2051,7 @@ Proof.
     + cbn in i. discriminate.
 Qed.
 
-Lemma eval_mkApps_Construct_size {wfl : WcbvFlags} {Σ ind c args v} :
+Lemma eval_mkApps_Construct_size {wfl : WcbvFlags} {Σ ind c args v} (Hwfl : with_guarded_fix <> unguarded_fix_dont_touch_arg_rule) :
   with_constructor_as_block = false ->
   forall ev : eval Σ (mkApps (tConstruct ind c []) args) v,
   ∑ args' (evf : eval Σ (tConstruct ind c []) (tConstruct ind c [])),
@@ -2007,7 +2060,7 @@ Lemma eval_mkApps_Construct_size {wfl : WcbvFlags} {Σ ind c args v} :
       v = mkApps (tConstruct ind c []) args'].
 Proof.
   intros hblock ev.
-  destruct (eval_mkApps_inv_size ev) as [f'' [args' [? []]]].
+  specialize (eval_mkApps_inv_size Hwfl ev) as [f'' [args' [? []]]].
   exists args'.
   destruct (eval_mkApps_Construct_inv _ _ _ _ _ hblock ev) as [? []]. subst v.
   unshelve eexists (eval_atom _ (tConstruct ind c []) _).
@@ -2020,13 +2073,13 @@ Proof.
   eapply All2_impl; tea; cbn; eauto. now intros x y []. 
 Qed.
 
-Lemma eval_construct_size  {fl : WcbvFlags} [Σ kn c args e] : 
+Lemma eval_construct_size  {fl : WcbvFlags} [Σ kn c args e] (Hwfl : with_guarded_fix <> unguarded_fix_dont_touch_arg_rule) : 
   with_constructor_as_block = false ->
   forall (ev : eval Σ (mkApps (tConstruct kn c []) args) e),
   ∑ args', (e = mkApps (tConstruct kn c []) args') ×
   All2 (fun x y => ∑ ev' : eval Σ x y, eval_depth ev' < eval_depth ev) args args'.
 Proof.
-  intros hblock ev; destruct (eval_mkApps_Construct_size hblock ev) as [args'[evf [_ hargs hv]]].
+  intros hblock ev; destruct (eval_mkApps_Construct_size Hwfl hblock ev) as [args'[evf [_ hargs hv]]].
   exists args'; intuition auto.
 Qed.
 
@@ -2041,4 +2094,47 @@ Proof.
   depelim H2.
   specialize (IHx e _ H'). simpl.
   rewrite mkApps_app. simpl. econstructor; eauto.
+Qed.
+
+Local Hint Constructors eval : core.
+
+Lemma eval_trans_inv {wfl : WcbvFlags} Σ t v v' : 
+ eval Σ t v -> eval Σ v v' -> v = v'.
+Proof.
+  intros H.
+  eapply eval_deterministic. eapply value_final. eapply eval_to_value. eapply H.
+Qed.
+
+Lemma eval_app_cong_tApp {fl : WcbvFlags} Σ t v f res :
+  with_guarded_fix = unguarded_fix_dont_touch_arg_rule ->
+  eval Σ t v ->  
+  eval Σ (tApp f v) res ->
+  eval Σ (tApp f t) res.
+Proof.
+  intros. depind H1. all: try now (cbn in *; congruence).
+  - econstructor; eauto.
+  - econstructor; eauto. assert (a = a') as ->; eauto using eval_trans_inv.
+  - eapply eval_fix''; eauto.
+  - eapply eval_construct; eauto. eapply eval_trans; eauto.
+  - eapply eval_app_cong; eauto. eapply eval_trans; eauto.
+Qed.
+
+Lemma eval_right_fix_rule {wfl : WcbvFlags} Σ t v :
+  with_guarded_fix = false ->
+  eval Σ t v ->
+  eval (wfl := {| with_prop_case := wfl.(with_prop_case) ; with_guarded_fix := unguarded_fix_dont_touch_arg_rule ; with_constructor_as_block := wfl.(with_constructor_as_block) |})
+    Σ t v.
+Proof.
+  Local Arguments eval _ _ _ _ : clear implicits.
+  set (wfl' := {|
+       with_prop_case := with_prop_case;
+       with_guarded_fix := unguarded_fix_dont_touch_arg_rule;
+       with_constructor_as_block := with_constructor_as_block
+     |}).
+  intros hwf He. induction He; eauto.
+  all: try now (cbn in *; congruence).
+  - eapply eval_fix''; eauto.
+    eapply eval_app_cong_tApp; eauto.
+  - econstructor; eauto. clear - a iha. induction a; invs iha; econstructor; eauto.
+  - eapply eval_app_cong; eauto. now rewrite hwf in i.
 Qed.

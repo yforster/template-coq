@@ -285,7 +285,8 @@ Proof.
   - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
   - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
   - rewrite is_box_tApp. move/IHev1 => ?. subst => //.
-  - rewrite is_box_tApp. move/IHev1 => ?. subst. solve_discr.
+  - rewrite is_box_tApp. move/IHev1 => ?. subst => //.
+  - rewrite is_box_tApp. move/IHev1 => ?. subst => //. solve_discr.
   - rewrite is_box_tApp. move/IHev1 => ?. subst. cbn in i.
     destruct EWcbvEval.with_guarded_fix => //.
   - destruct t => //.
@@ -610,6 +611,18 @@ Proof.
     apply/andP; split => //.
     eapply closed_cunfold_fix; tea.
 
+  - move/andP => [] clf cla.
+    eapply eval_closed in ev1 => //.
+    eapply eval_closed in ev2; tas.
+    simpl in *. eapply Ee.eval_fix''. auto. auto.
+    eapply optimize_cunfold_fix; eauto.
+    eapply closed_fix_subst => //.
+    eapply IHev2; tea.
+    apply/andP; split => //.
+    eapply closed_cunfold_fix; tea.
+    cbn. rtoProp; split; eauto.
+    eapply closed_cunfold_fix; tea.
+
   - move/andP => [] cd clbrs. specialize (IHev1 cd).
     rewrite closedn_mkApps in IHev2.
     move: (eval_closed _ clΣ _ _ cd ev1).
@@ -704,7 +717,12 @@ Proof.
         rewrite !negb_or.
         rewrite optimize_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
-        destruct v => /= //. 
+        destruct v => /= //.
+      + move: i. 
+        rewrite !negb_or.
+        rewrite optimize_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
+        destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
+        destruct v => /= //.
   - destruct t => //.
     all:constructor; eauto. cbn [atom optimize] in i |- *.
     rewrite -lookup_constructor_optimize //. destruct l => //.

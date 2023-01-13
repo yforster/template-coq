@@ -71,7 +71,7 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
     This translation is a noop on terms and environments.  *)
   guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
   (* Remove all constructor parameters *)
-  remove_params_optimization (wcon := eq_refl) ▷ 
+  remove_params_optimization (wcon := eq_refl) (wfix := _) ▷ 
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   (* Remove all cases / projections on propositional content *)
@@ -79,7 +79,7 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true  ▷
   (* Inline projections to cases *)
-  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
+  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wfix := _) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl :=  efl) true ▷
@@ -108,11 +108,11 @@ Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := E
   pcuic_expand_lets_transform ▷
   erase_transform ▷ 
   guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
-  remove_params_fast_optimization (wcon := eq_refl)  _ ▷ 
+  remove_params_fast_optimization (wcon := eq_refl) (wfix := _) _ ▷ 
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
-  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
+  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) (wfix := _) ▷
   let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in
   rebuild_wf_env_transform (efl :=  efl) true ▷
   constructors_as_blocks_transformation efl (has_app := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl).

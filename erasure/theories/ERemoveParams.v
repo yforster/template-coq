@@ -832,7 +832,7 @@ Proof.
     intros; rtoProp; intuition auto; solve_all.
 Qed.
 
-Lemma strip_eval (efl := all_env_flags) {wfl:WcbvFlags} {wcon : with_constructor_as_block = false} {Σ : GlobalContextMap.t} t v :
+Lemma strip_eval (efl := all_env_flags) {wfl:WcbvFlags} {wcon : with_constructor_as_block = false} {wfix : with_guarded_fix <> unguarded_fix_dont_touch_arg_rule} {Σ : GlobalContextMap.t} t v :
   isEtaExp_env Σ ->
   closed_env Σ ->
   wf_glob Σ ->
@@ -843,7 +843,7 @@ Lemma strip_eval (efl := all_env_flags) {wfl:WcbvFlags} {wcon : with_constructor
 Proof.
   intros etaΣ clΣ wfΣ.
   revert t v.
-  unshelve eapply (eval_preserve_mkApps_ind wfl wcon Σ (fun x y => eval (strip_env Σ) (strip Σ x) (strip Σ y))
+  unshelve eapply (eval_preserve_mkApps_ind wfl wcon wfix Σ (fun x y => eval (strip_env Σ) (strip Σ x) (strip Σ y))
     (fun n x => closedn n x) (Qpres := Qpreserves_closedn Σ clΣ)) => //.
   { intros. eapply eval_closed; tea. }
   all:intros; simpl in *.

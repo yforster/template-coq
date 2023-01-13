@@ -110,9 +110,9 @@ Qed.
     where fixpoints are not guarded. It requires eta-expanded fixpoints and evaluation 
     to use the guarded fixpoint rule as a precondition. *)
 
-Import EWcbvEval (WcbvFlags, with_prop_case, with_guarded_fix).
+Import EWcbvEval (WcbvFlags, with_prop_case, with_guarded_fix, fix_possibilities, guarded_fix_rule, unguarded_fix_dont_touch_arg_rule).
 
-Program Definition guarded_to_unguarded_fix {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} {efl : EEnvFlags} (wguard : with_guarded_fix) :
+Program Definition guarded_to_unguarded_fix {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} {efl : EEnvFlags} (wguard : with_guarded_fix = guarded_fix_rule) :
   Transform.t eprogram_env eprogram_env EAst.term EAst.term 
     (eval_eprogram_env fl) (eval_eprogram_env (EWcbvEval.switch_unguarded_fix fl)) :=
   {| name := "switching to unguarded fixpoints";
@@ -148,7 +148,7 @@ Next Obligation.
   cbn. intros fl efl [] input v [] ev p'; exists v; split => //.
 Qed.
 
-Program Definition remove_params_optimization {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false}
+Program Definition remove_params_optimization {fl : EWcbvEval.WcbvFlags} {wfix : fl.(with_guarded_fix) <> unguarded_fix_dont_touch_arg_rule} {wcon : EWcbvEval.with_constructor_as_block = false} 
   (efl := all_env_flags): 
   Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
   {| name := "stripping constructor parameters";
@@ -157,16 +157,14 @@ Program Definition remove_params_optimization {fl : EWcbvEval.WcbvFlags} {wcon :
     post p := wf_eprogram (switch_no_params efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
     obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
 Next Obligation.
-  move=> fl wcon efl [Σ t] [wfp etap].
-  simpl.
-  cbn -[ERemoveParams.strip] in *.
-  split. now eapply ERemoveParams.strip_program_wf.
+  move=> fl wfix wcon efl [Σ t] [wfp etap].
+  simpl. split. now eapply ERemoveParams.strip_program_wf.
   now eapply ERemoveParams.strip_program_expanded.
 Qed.
 
 Next Obligation.
-  red. move=> ? wcon [Σ t] /= v [[wfe wft] etap] [ev].
-  unshelve eapply ERemoveParams.strip_eval in ev; eauto.
+  red. move=> fl wfix wcon [Σ t] /= v [[wfe wft] etap] [ev].
+  unshelve eapply ERemoveParams.strip_eval in ev; eauto. destruct fl; cbn in *. 
   eexists; split => /= //. now sq. cbn in *.
   now move/andP: etap.
   now eapply wellformed_closed_env.
@@ -174,7 +172,7 @@ Next Obligation.
   now move/andP: etap.
 Qed.
 
-Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) {wcon : EWcbvEval.with_constructor_as_block = false}
+Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) {wfix : fl.(with_guarded_fix) <> unguarded_fix_dont_touch_arg_rule} {wcon : EWcbvEval.with_constructor_as_block = false}
   (efl := all_env_flags) :
   Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
   {| name := "stripping constructor parameters (faster?)";
@@ -183,7 +181,7 @@ Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) {w
     post p := wf_eprogram (switch_no_params efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
     obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
 Next Obligation.
-  move=> fl wcon efl [Σ t] [wfp etap].
+  move=> fl wfix wcon efl [Σ t] [wfp etap].
   simpl.
   cbn -[ERemoveParams.strip] in *.
   rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
@@ -193,7 +191,7 @@ Next Obligation.
 Qed.
 
 Next Obligation.
-  red. move=> ? wcon [Σ t] /= v [[wfe wft] etap] [ev].
+  red. move=> fl wfix wcon [Σ t] /= v [[wfe wft] etap] [ev].
   rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
   unshelve eapply ERemoveParams.strip_eval in ev; eauto.
   eexists; split => /= //.
@@ -231,7 +229,7 @@ Qed.
 
 From MetaCoq.Erasure Require Import EInlineProjections.
 
-Program Definition inline_projections_optimization {fl : WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} (efl := switch_no_params all_env_flags)
+Program Definition inline_projections_optimization {fl : WcbvFlags} {wfix : fl.(with_guarded_fix) <> unguarded_fix_dont_touch_arg_rule}  {wcon : EWcbvEval.with_constructor_as_block = false} (efl := switch_no_params all_env_flags)
   {hastrel : has_tRel} {hastbox : has_tBox} :
   Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) := 
   {| name := "primitive projection inlining"; 
@@ -241,16 +239,16 @@ Program Definition inline_projections_optimization {fl : WcbvFlags} {wcon : EWcb
     obseq g g' v v' := v' = EInlineProjections.optimize g.1 v |}.
 
 Next Obligation.
-  move=> fl wcon efl hastrel hastbox [Σ t] [wfp etap].
+  move=> fl wfix wcon efl hastrel hastbox [Σ t] [wfp etap].
   cbn in *. split.
   - now eapply optimize_program_wf.
   - now eapply optimize_program_expanded.
 Qed.
 Next Obligation.
-  red. move=> fl wcon hastrel hastbox [Σ t] /= v [wfe wft] [ev].
+  red. move=> fl wfix wcon hastrel hastbox [Σ t] /= v [wfe wft] [ev].
   eapply EInlineProjections.optimize_correct in ev; eauto.
   eexists; split => //. red. sq; auto. cbn. apply wfe.
-  cbn. eapply wfe. Unshelve. auto.
+  cbn. eapply wfe. Unshelve. auto. auto.
 Qed.
 
 From MetaCoq.Erasure Require Import EConstructorsAsBlocks.

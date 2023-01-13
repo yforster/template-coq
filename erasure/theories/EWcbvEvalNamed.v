@@ -112,10 +112,11 @@ Section Wcbv.
     eval Γ (tCase (ind, 0) discr brs) res
 
   (** Fix unfolding, without guard *)
-  | eval_fix_unfold f mfix idx a fn res Γ' :
+  | eval_fix_unfold f mfix idx a na na' av fn res Γ' :
     eval Γ f (vRecClos mfix idx Γ') ->
     NoDup (map fst mfix) ->
-    eval (add_multiple (map fst mfix) (fix_env mfix Γ') Γ') (tApp fn a) res ->
+    nth_error mfix idx = Some (na', tLambda (nNamed na) fn) ->
+    eval (add na av (add_multiple (map fst mfix) (fix_env mfix Γ') Γ')) fn res ->
     eval Γ (tApp f a) res
 
   | eval_fix mfix idx nms : 

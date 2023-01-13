@@ -207,7 +207,7 @@ Lemma eval_preserve_mkApps_ind :
           → (∀ (f4 : term) (mfix : mfixpoint term) 
                (idx : nat) (argsv : list term) 
                (a av fn res : term),
-               with_guarded_fix ->
+               with_guarded_fix = true ->
                eval Σ f4 (mkApps (tFix mfix idx) argsv)
                → P f4 (mkApps (tFix mfix idx) argsv)
                  → eval Σ a av
@@ -220,7 +220,7 @@ Lemma eval_preserve_mkApps_ind :
             → (∀ (f5 : term) (mfix : mfixpoint term) 
                  (idx : nat) (argsv : list term) 
                  (a av : term) (narg : nat) (fn : term),
-                 with_guarded_fix ->
+                 with_guarded_fix = true ->
                  eval Σ f5 (mkApps (tFix mfix idx) argsv)
                  → P f5 (mkApps (tFix mfix idx) argsv)
                    → eval Σ a av
@@ -240,7 +240,15 @@ Lemma eval_preserve_mkApps_ind :
               → eval Σ (tApp fn av) res
               → P (tApp fn av) res
               → P' (tApp f5 a) res) → 
-              
+              (∀ (f5 : term) (mfix : mfixpoint term) 
+            (idx : nat) (a : term) (narg : nat) (fn : term) res,
+            with_guarded_fix = unguarded_fix_dont_touch_arg_rule ->
+            eval Σ f5 (tFix mfix idx)
+            → P f5 (tFix mfix idx)
+              → cunfold_fix mfix idx = Some (narg, fn)
+              → eval Σ (tApp fn a) res
+              → P (tApp fn a) res
+              → P' (tApp f5 a) res) →               
               (∀ (ip : inductive × nat) (mfix : mfixpoint term) 
                    (idx : nat) (args : list term) 
                    (narg : nat) discr (fn : term) (brs : 
@@ -294,7 +302,7 @@ Lemma eval_preserve_mkApps_ind :
      forall (ev : eval Σ f11 f'), 
      P f11 f' ->  
      (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> Q 0 t -> P t u) →
-     ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' 
+     ~~ (isLambda f' || (if is_guarded with_guarded_fix then isFixApp f' else isFix f') || isBox f' 
       || isConstructApp f' || isPrimApp f') → 
      eval Σ a a' → P a a' → 
      P' (tApp f11 a) (tApp f' a')) → 
@@ -314,7 +322,7 @@ Proof.
   intros.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2.π2))).
-  set(foo := existT _ t (existT _ t0 (existT _ X15 H)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
+  set(foo := existT _ t (existT _ t0 (existT _ X16 H)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   change t with (projT1 foo).
   change t0 with (projT1 (projT2 foo)).
   revert foo.
@@ -324,8 +332,8 @@ Proof.
   forward p.
   2:{ apply p. apply measure_wf, lt_wf. }
   clear p.
-  rename X15 into qt. rename X13 into Xcappexp.
-  rename X14 into Qatom.
+  rename X16 into qt. rename X14 into Xcappexp.
+  rename X15 into Qatom.
   clear t t0 qt H.
   intros (t & t0 & qt & ev). 
   intros IH.
@@ -348,8 +356,8 @@ Proof.
   Ltac myt hyp anda P'Q := eapply hyp; tea; (apply and_assum; [ih|hp' P'Q]).
   
   destruct ev.
-  1-18:eapply qpres in qt as qt'; depelim qt' => //. 
-  all:try congruence.
+  1-19:eapply qpres in qt as qt'; depelim qt' => //. 
+  all:try now (cbn in *; congruence).
   - eapply X; tea; (apply and_assum; [ih|hp' P'Q]).
   - assert (ql : Q 0 (tLambda na b)).
     { eapply P'Q; tea. ih. }
@@ -373,8 +381,8 @@ Proof.
       eapply (qsubst _ (List.rev (skipn pars args))) in a.
       2:{ eapply All_rev, All_skipn. 
         assert (Q 0 (tConstruct ind c args)).
-        eapply P'Q; tea; ih. eapply qpres in X13.
-        depelim X13 => //. }
+        eapply P'Q; tea; ih. eapply qpres in X14.
+        depelim X14 => //. }
       exact a. }
     eapply nth_error_all in a; tea; cbn. rewrite Nat.add_0_r in a.
     eapply X2; tea; (apply and_assum; [ih|hp' P'Q]).
@@ -407,6 +415,11 @@ Proof.
       eapply qfixs in ev1'. cbn in IH. eapply ev1' in e.
       unshelve eapply (qapp _ _ _ [av]); tea; split => //. now eapply All_tip.1. }
     eapply X6; tea. 1-3:(apply and_assum; [ih|hp' P'Q]).
+  - assert (qa : Q 0 (tApp fn a)).
+    { pose proof (ev1' := ev1). eapply P'Q in ev1' => //. 2:clear ev1'; ih.
+      eapply qfixs in ev1'. cbn in IH. eapply ev1' in e.
+      unshelve eapply (qapp _ _ _ [a]); tea; split => //. now eapply All_tip.1. }
+    eapply X7; tea. 1-2:(apply and_assum; [ih|hp' P'Q]).
   - assert (qa : Q 0 (tCase ip (mkApps fn args) brs)).
     { eapply qcase; tea => //.
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
@@ -414,7 +427,7 @@ Proof.
       eapply qapp => //. split => //.
       eapply (qcofixs mfix idx) in hfix; tea. 
       clear ev1'; ih. }
-    eapply X7; tea; (apply and_assum; [ih|hp' P'Q]).
+    eapply X8; tea; (apply and_assum; [ih|hp' P'Q]).
   - cbn in IH.
     assert (qa : Q 0 (tProj p (mkApps fn args))).
     { pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
@@ -422,17 +435,17 @@ Proof.
       eapply qproj; tea => //. eapply qapp => //. split => //.
       eapply (qcofixs mfix idx) in hfix; tea.
       clear ev1'; ih. }
-    eapply X8; tea; (apply and_assum; [ih|hp' P'Q]).
+    eapply X9; tea; (apply and_assum; [ih|hp' P'Q]).
   - assert (Q 0 body).
     { cbn in IH; eapply (qconst (Q:=Q)) in isdecl. now rewrite e in isdecl. }
-    eapply X9; tea; (apply and_assum; [ih|hp' P'Q]).
+    eapply X10; tea; (apply and_assum; [ih|hp' P'Q]).
   - assert (Q 0 a).
     { pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
       eapply qpres in ev1'; depelim ev1' => //.
       { eapply nth_error_all in a0; tea. }
       clear ev1'; ih. }
-    eapply X10; tea; (apply and_assum; [ih|hp' P'Q]).
-  - unshelve eapply X11; tea; try (intros; apply and_assum; [ih|hp' P'Q]).
+    eapply X11; tea; (apply and_assum; [ih|hp' P'Q]).
+  - unshelve eapply X12; tea; try (intros; apply and_assum; [ih|hp' P'Q]).
   - rename args into cargs.
     eapply Xcappexp; tea. eauto.
     cbn in IH.
@@ -441,7 +454,7 @@ Proof.
     apply and_assum; [ih|hp' P'Q].
     eapply IHa. cbn. intros. eapply (IH _ _ q H). cbn. lia.
     now depelim a0.
-  - eapply (X12 _ _ _ _ ev1); tea. 
+  - eapply (X13 _ _ _ _ ev1); tea. 
     1,3:(apply and_assum; [ih|hp' P'Q]).
     intros. apply and_assum; [ih|hp' P'Q].
   - eapply Qatom; tea.

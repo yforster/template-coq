@@ -916,7 +916,7 @@ Lemma transform_blocks_eval {efl : EEnvFlags} (fl := EWcbvEval.target_wcbv_flags
 Proof.
   intros cstrbl haspars hasapp Σ etaΣ wfΣ.
   eapply 
-  (EWcbvEvalEtaInd.eval_preserve_mkApps_ind fl eq_refl (efl := efl) Σ _ 
+  (EWcbvEvalEtaInd.eval_preserve_mkApps_ind fl eq_refl ltac:(cbn; congruence) (efl := efl) Σ _ 
     (wellformed Σ) (Qpres := Qpreserves_wellformed efl _ cstrbl wfΣ)) => //; eauto.
   { intros. eapply EWcbvEval.eval_wellformed => //; tea. }
   all:intros *.

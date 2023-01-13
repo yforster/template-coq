@@ -146,7 +146,7 @@ Class Qpreserves {etfl : ETermFlags} (Q : nat -> term -> Type) Σ :=
 Set Warnings "+future-coercion-class-field".
 
 Lemma eval_preserve_mkApps_ind :
-∀ (wfl : WcbvFlags), with_constructor_as_block = false -> forall  {efl : EEnvFlags} (Σ : global_declarations) 
+∀ (wfl : WcbvFlags), with_constructor_as_block = false -> forall wfix : with_guarded_fix <> unguarded_fix_dont_touch_arg_rule, forall  {efl : EEnvFlags} (Σ : global_declarations) 
   (P' : term → term → Type)
   (Q : nat -> term -> Type)
   {Qpres : Qpreserves Q Σ}
@@ -207,7 +207,7 @@ Lemma eval_preserve_mkApps_ind :
           → (∀ (f4 : term) (mfix : mfixpoint term) 
                (idx : nat) (argsv : list term) 
                (a av fn res : term),
-               with_guarded_fix ->
+               with_guarded_fix = true ->
                eval Σ f4 (mkApps (tFix mfix idx) argsv)
                → P f4 (mkApps (tFix mfix idx) argsv)
                  → eval Σ a av
@@ -221,7 +221,7 @@ Lemma eval_preserve_mkApps_ind :
             → (∀ (f5 : term) (mfix : mfixpoint term) 
                  (idx : nat) (argsv : list term) 
                  (a av : term) (narg : nat) (fn : term),
-                 with_guarded_fix ->
+                 with_guarded_fix = true ->
                  eval Σ f5 (mkApps (tFix mfix idx) argsv)
                  → P f5 (mkApps (tFix mfix idx) argsv)
                    → eval Σ a av
@@ -304,7 +304,7 @@ Lemma eval_preserve_mkApps_ind :
      forall (ev : eval Σ f11 f'), 
      P f11 f' ->  
      (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> Q 0 t -> isEtaExp Σ t -> P t u) →
-     ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f' || 
+     ~~ (isLambda f' || (if is_guarded with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f' || 
       isPrimApp f') → 
      eval Σ a a' → P a a' → 
      isEtaExp Σ (tApp f' a') ->
@@ -322,7 +322,7 @@ Lemma eval_preserve_mkApps_ind :
   (∀ t : term, atom Σ t → Q 0 t -> isEtaExp Σ t -> P' t t) ->
   ∀ (t t0 : term), Q 0 t -> isEtaExp Σ t -> eval Σ t t0 → P' t t0.
 Proof.
-  intros wfl hcon. intros * Qpres P P'Q etaΣ wfΣ hasapp.
+  intros wfl hcon wfix. intros * Qpres P P'Q etaΣ wfΣ hasapp.
   assert (qfixs: Qfixs Q) by tc.
   assert (qcofixs: Qcofixs Q) by tc.
   intros.
@@ -595,7 +595,7 @@ Proof.
       assert (eval_depth ev1 = eval_depth ev1) by reflexivity.
       set (ev1' := ev1). change ev1 with ev1' in H at 1. clearbody ev1'. move: H.
       subst f.
-      pose proof (eval_construct_size hcon ev1') as [ex []].
+      pose proof (eval_construct_size wfix hcon ev1') as [ex []].
       cbn in IH. intros eq.
       assert (All2 (λ x y : term, ∑ ev' : eval Σ x y, eval_depth ev' < S (Nat.max (eval_depth ev1) (eval_depth ev2)))
         (remove_last args ++ [a]) (ex ++ [a'])).
@@ -667,8 +667,8 @@ Proof.
       subst f. exfalso.
       eapply eval_mkApps_Construct_inv in ev1' as [? [hf' hargs']]. subst f'.
       clear IH; move: i; rewrite !negb_or isConstructApp_mkApps /= !andb_false_r //.  auto.
-    * move=> /and4P [] etat0 etaargs etaa etat. 
-      split. eapply (X12 _ _ _ _ ev1); tea. 
+    * (* move=> /and4P [] etat0 etaargs etaa etat.
+      split. eapply (X12 _ _ _ _ ev1); tea.
       1,3:(apply and_assum; [ih|hp' P'Q]).
       intros. apply and_assum; [ih|hp' P'Q].
       pose proof (decompose_app_inv da). clear cv.
@@ -676,7 +676,7 @@ Proof.
       iheta q.
       eapply All_tip.1. iheta q0.
       eapply (isEtaExp_mkApps_intro _ _ [a']) => //. iheta q.
-      eapply All_tip.1. iheta q0.
+      eapply All_tip.1. iheta q0. *) todo "matthieu".
   - intros ise. split => //. eapply Qatom; tea.
 Qed.
 
@@ -752,14 +752,15 @@ Ltac destruct_nary_times :=
 
 Lemma eval_etaexp {fl : WcbvFlags} (efl := env_flags) {Σ a a'} :
   with_constructor_as_block = false ->
+  with_guarded_fix <> unguarded_fix_dont_touch_arg_rule ->
   isEtaExp_env Σ ->
   wf_glob Σ ->
   wellformed Σ 0 a ->
   eval Σ a a' -> isEtaExp Σ a -> isEtaExp Σ a'.
 Proof.
-  intros hcon etaΣ wfΣ wf ev eta.
+  intros hcon wfix etaΣ wfΣ wf ev eta.
   revert a a' wf eta ev.
-  eapply (eval_preserve_mkApps_ind (efl:=env_flags) fl hcon Σ (fun _ x => isEtaExp Σ x) (fun n t => wellformed Σ n t) 
+  eapply (eval_preserve_mkApps_ind (efl:=env_flags) fl hcon wfix Σ (fun _ x => isEtaExp Σ x) (fun n t => wellformed Σ n t) 
     (Qpres := Qpreserves_wellformed env_flags Σ eq_refl wfΣ)) => //.
   all:intros; repeat destruct_nary_times.
   all:intuition auto.

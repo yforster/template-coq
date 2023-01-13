@@ -82,7 +82,7 @@ Section eval_mkApps_rect.
     → (∀ (f4 : term) (mfix : mfixpoint term) 
          (idx : nat) (argsv : list term) 
          (a av fn res : term),
-        forall guarded : with_guarded_fix,
+        forall guarded : with_guarded_fix = true,
         forall ev : eval Σ f4 (mkApps (tFix mfix idx) argsv),
           P f4 (mkApps (tFix mfix idx) argsv)
           → IH _ _ ev
@@ -95,7 +95,7 @@ Section eval_mkApps_rect.
     → (∀ (f5 : term) (mfix : mfixpoint term) 
          (idx : nat) (argsv : list term) 
          (a av : term) (narg : nat) (fn : term),
-        forall guarded : with_guarded_fix,
+        forall guarded : with_guarded_fix = true,
         forall ev : eval Σ f5 (mkApps (tFix mfix idx) argsv),
           P f5 (mkApps (tFix mfix idx) argsv) 
           → IH _ _ ev
@@ -114,6 +114,16 @@ Section eval_mkApps_rect.
           → cunfold_fix mfix idx = Some (narg, fn)
           → eval Σ (tApp fn av) res
           → P (tApp fn av) res
+          → P (tApp f6 a) res)
+    → (∀ (f6 : term) (mfix : mfixpoint term) 
+         (idx : nat) (a fn res : term) (narg : nat) 
+         (unguarded : with_guarded_fix = unguarded_fix_dont_touch_arg_rule) 
+         (ev : eval Σ f6 (tFix mfix idx)),
+          P f6 (tFix mfix idx)
+          → IH _ _ ev
+          → cunfold_fix mfix idx = Some (narg, fn)
+          → eval Σ (tApp fn a) res
+          → P (tApp fn a) res
           → P (tApp f6 a) res)
     → (∀ (ip : Kernames.inductive × nat) (mfix : mfixpoint term) 
          (idx : nat) (args : list term) 
@@ -233,7 +243,7 @@ Section eval_mkApps_rect.
       → ∀ (i : ~~
                (isLambda f'
                 || 
-                (if with_guarded_fix
+                (if is_guarded with_guarded_fix
                  then isFixApp f'
                  else isFix f') || 
                 isBox f' || 
@@ -246,7 +256,7 @@ Section eval_mkApps_rect.
     → (∀ t : term, atom Σ t → P t t)
     → ∀ t t0 : term, eval Σ t t0 → P t t0.
 Proof using Type.
-  intros ????????????????????? H.
+  intros ?????????????????????? H.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & eval Σ t t0 }}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2))).
   set(foo := existT _ t (existT _ t0 H) :  { t : _ & { t0 : _ & eval Σ t t0 }}).
@@ -274,7 +284,7 @@ Proof using Type.
   | [ H : _ |- _ ] =>
     unshelve eapply H; try match goal with |- eval _ _ _ => tea end; tea; unfold IH; intros; unshelve eapply IH'; tea; cbn; try lia
   end].
-  - eapply X15; tea; auto.
+  - eapply X16; tea; auto.
     clear -a IH'. induction a; constructor.
     eapply (IH' _ _ r). cbn. lia. apply IHa.
     intros. eapply (IH' _ _ H). cbn. lia.

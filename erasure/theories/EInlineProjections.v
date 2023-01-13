@@ -488,14 +488,14 @@ Proof.
 Qed.
 
 
-Lemma optimize_correct {fl} {wcon : with_constructor_as_block = false} { Σ : GlobalContextMap.t} t v :
+Lemma optimize_correct {fl} {wcon : with_constructor_as_block = false} {wfix : with_guarded_fix <> unguarded_fix_dont_touch_arg_rule} { Σ : GlobalContextMap.t} t v :
   wf_glob Σ ->
   @eval fl Σ t v ->
   wellformed Σ 0 t ->
   @eval fl (optimize_env Σ) (optimize Σ t) (optimize Σ v).
 Proof.
   intros wfΣ ev.
-  induction ev; simpl in *.
+  induction ev; simpl in *; try now congruence.
 
   - move/andP => [] cla clt. econstructor; eauto.
   - move/andP => [] clf cla.
@@ -521,8 +521,6 @@ Proof.
     econstructor; eauto.
     rewrite -is_propositional_cstr_optimize //. tea.
     rewrite nth_error_map e2 //. len. len.
-
-  - congruence.
 
   - move/andP => [] /andP[] hl wfd wfbrs.
     forward IHev2. eapply wellformed_substl; tea => //.
@@ -628,8 +626,6 @@ Proof.
     eapply (f_equal (option_map (optimize Σ))) in e3.
     cbn in e3. rewrite -e3. f_equal. f_equal. lia.
 
-  - congruence.
-
   - move=> /andP[] iss cld.
     rewrite GlobalContextMap.lookup_projection_spec.
     destruct lookup_projection as [[[[mdecl idecl] cdecl'] pdecl]|] eqn:hl' => //.
@@ -654,8 +650,6 @@ Proof.
     now len.
     now eapply IHev2.
 
-  - congruence.
-
   - move/andP => [] clf cla.
     specialize (IHev1 clf). specialize (IHev2 cla).
     eapply eval_app_cong; eauto.
@@ -676,7 +670,8 @@ Proof.
         rewrite !negb_or.
         rewrite optimize_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
-        destruct v => /= //. 
+        destruct v => /= //.
+      + congruence.
   - destruct t => //.
     all:constructor; eauto.
     cbn [atom optimize] in i |- *.

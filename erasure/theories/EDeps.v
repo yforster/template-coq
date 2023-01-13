@@ -312,6 +312,11 @@ Proof.
     eapply erases_deps_cunfold_fix; eauto.
     now depelim IHev1.
   - depelim er.
+    specialize (IHev1 er1).
+    eapply IHev2. econstructor; eauto.
+    eapply erases_deps_cunfold_fix; eauto.
+    now depelim IHev1.
+  - depelim er.
     specialize (IHev1 er).
     apply erases_deps_mkApps_inv in IHev1 as (? & ?).
     depelim H4.
