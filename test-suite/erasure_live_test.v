@@ -1,9 +1,30 @@
 From Coq Require Import Recdef.
-From MetaCoq.Template Require Import TemplateMonad Loader.
-(* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN TemplateToPCUIC PCUICToTemplate.
+From MetaCoq.Template Require Import TemplateMonad Loader WcbvEval.
+From MetaCoq.Template Require Import bytestring.
 
-From MetaCoq.Erasure Require Import Erasure.
+CoInductive Stream := Seq : nat -> Stream -> Stream.
+CoFixpoint from (n:nat) : Stream := Seq n (from (S n)).
+Definition hd (x:Stream) := match x with | Seq a _ => a end.
+Definition tl (x:Stream) := match x with | Seq _ b => b end.
+
+Compute hd (tl (from 10)).
+Definition v := Eval compute in t.
+
+Print t.
+
+Definition x := ltac:(let x := eval unfold t, hd, tl, from in t in exact x).
+Print x.
+
+Lemma eval_bla : forall Σ, eval Σ <% (ltac:()) %> <% ltac:(let x := eval unfold v in v in exact x) %>.
+Proof.
+  intros.
+  eapply eval_beta.
+
+Compute t.
+
+Definition a := <% t %>.
+
+Lemma eval
 
 From Coq Require Import String.
 Local Open Scope string_scope.
