@@ -46,7 +46,7 @@ jobs:
           ocaml_version: ${{ matrix.ocaml_version }}
           before_script: |
             startGroup "Workaround permission issue"
-              find . -not -path "*/.git*" -type f -exec chown coq:coq {} \;
+              find . -not -path "*/.git*" -type f -exec sudo chown coq:coq {} \;
               opam exec -- ocamlfind list
             endGroup
           before_install: |
