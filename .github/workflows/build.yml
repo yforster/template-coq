@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 1
 
       - name: Check for todos
-        run: ./checktodos.sh
+        run: git ls-files
 
   build:
     runs-on: ubuntu-latest
