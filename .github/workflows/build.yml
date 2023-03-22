@@ -37,6 +37,10 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Test
+        run:
+          git ls-files
+
       - name: Docker-Coq-Action
         uses: coq-community/docker-coq-action@v1
         with:
