@@ -19,6 +19,7 @@ jobs:
         run: |
           git --version
           opam --version
+          git ls-files --others --exclude-standard
 
   build:
     runs-on: ubuntu-latest
@@ -29,7 +30,7 @@ jobs:
           - '8.16'
         ocaml_version:
           - '4.14-flambda'
-        target: [ local, opam, quick ]
+        target: [ local ]
       fail-fast: true
 
     steps:
