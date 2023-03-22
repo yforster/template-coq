@@ -18,7 +18,6 @@ jobs:
       - name: Check for todos
         run: |
           git --version
-          opam --version
           git ls-files --others --exclude-standard
 
   build:
